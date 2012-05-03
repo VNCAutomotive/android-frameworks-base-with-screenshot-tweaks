@@ -2264,9 +2264,31 @@ status_t SurfaceFlinger::captureScreenImplLocked(DisplayID dpy,
     if ((sw > hw_w) || (sh > hw_h))
         return BAD_VALUE;
 
+    int bpp, storage, format, type;
+
+    switch(*f) {
+    case PIXEL_FORMAT_RGBA_8888:
+    case PIXEL_FORMAT_BGRA_8888:
+        bpp = 4;
+        storage = GL_RGBA8_OES;
+        format = GL_RGBA;
+        type = GL_UNSIGNED_BYTE;
+        break;
+
+    case PIXEL_FORMAT_RGB_565:
+    default: /* capture in RGB565 by default for performance */
+        bpp = 2;
+        storage = GL_RGB565_OES;
+        format = GL_RGB;
+        type = GL_UNSIGNED_SHORT_5_6_5;
+        *f = PIXEL_FORMAT_RGB_565;
+        break;
+    }
+
+
     sw = (!sw) ? hw_w : sw;
     sh = (!sh) ? hw_h : sh;
-    const size_t size = sw * sh * 4;
+    const size_t size = sw * sh * bpp;
 
     //LOGD("screenshot: sw=%d, sh=%d, minZ=%d, maxZ=%d",
     //        sw, sh, minLayerZ, maxLayerZ);
@@ -2278,7 +2300,7 @@ status_t SurfaceFlinger::captureScreenImplLocked(DisplayID dpy,
     GLuint name, tname;
     glGenRenderbuffersOES(1, &tname);
     glBindRenderbufferOES(GL_RENDERBUFFER_OES, tname);
-    glRenderbufferStorageOES(GL_RENDERBUFFER_OES, GL_RGBA8_OES, sw, sh);
+    glRenderbufferStorageOES(GL_RENDERBUFFER_OES, storage, sw, sh);
     glGenFramebuffersOES(1, &name);
     glBindFramebufferOES(GL_FRAMEBUFFER_OES, name);
     glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES,
@@ -2331,12 +2353,11 @@ status_t SurfaceFlinger::captureScreenImplLocked(DisplayID dpy,
             void* const ptr = base->getBase();
             if (ptr) {
                 // capture the screen with glReadPixels()
-                glReadPixels(0, 0, sw, sh, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+                glReadPixels(0, 0, sw, sh, format, type, ptr);
                 if (glGetError() == GL_NO_ERROR) {
                     *heap = base;
                     *w = sw;
                     *h = sh;
-                    *f = PIXEL_FORMAT_RGBA_8888;
                     result = NO_ERROR;
                 }
             } else {

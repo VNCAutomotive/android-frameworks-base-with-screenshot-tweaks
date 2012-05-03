@@ -186,6 +186,7 @@ public:
     uint32_t getWidth() const;
     uint32_t getHeight() const;
     PixelFormat getFormat() const;
+    void requestFormat(PixelFormat f);
     uint32_t getStride() const;
     // size of allocated memory in bytes
     size_t getSize() const;

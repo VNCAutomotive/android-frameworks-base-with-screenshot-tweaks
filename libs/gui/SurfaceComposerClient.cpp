@@ -591,6 +591,9 @@ PixelFormat ScreenshotClient::getFormat() const {
     return mFormat;
 }
 
+void ScreenshotClient::requestFormat(PixelFormat f) {
+    mFormat = f;
+}
 uint32_t ScreenshotClient::getStride() const {
     return mWidth;
 }
