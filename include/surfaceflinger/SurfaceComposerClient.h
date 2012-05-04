@@ -176,6 +176,8 @@ public:
     status_t update(uint32_t reqWidth, uint32_t reqHeight,
             uint32_t minLayerZ, uint32_t maxLayerZ);
 
+    sp<IMemoryHeap> getHeap();
+
     // release memory occupied by the screenshot
     void release();
 

@@ -540,13 +540,12 @@ status_t SurfaceComposerClient::unfreezeDisplay(DisplayID dpy, uint32_t flags)
 // ----------------------------------------------------------------------------
 
 ScreenshotClient::ScreenshotClient()
-    : mWidth(0), mHeight(0), mFormat(PIXEL_FORMAT_NONE) {
+    : mWidth(0), mHeight(0), mFormat(PIXEL_FORMAT_NONE), mHeap(0) {
 }
 
 status_t ScreenshotClient::update() {
     sp<ISurfaceComposer> s(ComposerService::getComposerService());
     if (s == NULL) return NO_INIT;
-    mHeap = 0;
     return s->captureScreen(0, &mHeap,
             &mWidth, &mHeight, &mFormat, 0, 0,
             0, -1UL);
@@ -555,7 +554,6 @@ status_t ScreenshotClient::update() {
 status_t ScreenshotClient::update(uint32_t reqWidth, uint32_t reqHeight) {
     sp<ISurfaceComposer> s(ComposerService::getComposerService());
     if (s == NULL) return NO_INIT;
-    mHeap = 0;
     return s->captureScreen(0, &mHeap,
             &mWidth, &mHeight, &mFormat, reqWidth, reqHeight,
             0, -1UL);
@@ -565,7 +563,6 @@ status_t ScreenshotClient::update(uint32_t reqWidth, uint32_t reqHeight,
         uint32_t minLayerZ, uint32_t maxLayerZ) {
     sp<ISurfaceComposer> s(ComposerService::getComposerService());
     if (s == NULL) return NO_INIT;
-    mHeap = 0;
     return s->captureScreen(0, &mHeap,
             &mWidth, &mHeight, &mFormat, reqWidth, reqHeight,
             minLayerZ, maxLayerZ);
@@ -600,6 +597,10 @@ uint32_t ScreenshotClient::getStride() const {
 
 size_t ScreenshotClient::getSize() const {
     return mHeap->getSize();
+}
+
+sp<IMemoryHeap> ScreenshotClient::getHeap() {
+    return mHeap;
 }
 
 // ----------------------------------------------------------------------------

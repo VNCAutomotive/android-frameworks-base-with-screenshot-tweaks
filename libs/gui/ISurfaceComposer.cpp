@@ -114,6 +114,12 @@ public:
         data.writeInt32(reqHeight);
         data.writeInt32(minLayerZ);
         data.writeInt32(maxLayerZ);
+        if (*heap == NULL) {
+            data.writeInt32(0);
+        } else {
+            data.writeInt32(1);
+            data.writeStrongBinder((*heap)->asBinder());
+        }
         remote()->transact(BnSurfaceComposer::CAPTURE_SCREEN, data, &reply);
         *heap = interface_cast<IMemoryHeap>(reply.readStrongBinder());
         *width = reply.readInt32();
@@ -224,7 +230,13 @@ status_t BnSurfaceComposer::onTransact(
             uint32_t reqHeight = data.readInt32();
             uint32_t minLayerZ = data.readInt32();
             uint32_t maxLayerZ = data.readInt32();
+            uint32_t heapProvided = data.readInt32();
             sp<IMemoryHeap> heap;
+            if (heapProvided) {
+                heap = interface_cast<IMemoryHeap>(data.readStrongBinder());
+            } else {
+                heap = 0;
+            }
             uint32_t w, h;
             PixelFormat f;
             status_t res = captureScreen(dpy, &heap, &w, &h, &f,

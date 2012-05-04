@@ -2290,6 +2290,13 @@ status_t SurfaceFlinger::captureScreenImplLocked(DisplayID dpy,
     sh = (!sh) ? hw_h : sh;
     const size_t size = sw * sh * bpp;
 
+    if (*heap == NULL) {
+        sp<MemoryHeapBase> base(
+                    new MemoryHeapBase(size, 0, "screen-capture") );
+        *heap = base;
+    } else if(size > (*heap)->getSize())
+        return BAD_VALUE;
+
     //LOGD("screenshot: sw=%d, sh=%d, minZ=%d, maxZ=%d",
     //        sw, sh, minLayerZ, maxLayerZ);
 
@@ -2346,16 +2353,11 @@ status_t SurfaceFlinger::captureScreenImplLocked(DisplayID dpy,
             // error while rendering
             result = INVALID_OPERATION;
         } else {
-            // allocate shared memory large enough to hold the
-            // screen capture
-            sp<MemoryHeapBase> base(
-                    new MemoryHeapBase(size, 0, "screen-capture") );
-            void* const ptr = base->getBase();
+            void* const ptr = (*heap)->getBase();
             if (ptr) {
                 // capture the screen with glReadPixels()
                 glReadPixels(0, 0, sw, sh, format, type, ptr);
                 if (glGetError() == GL_NO_ERROR) {
-                    *heap = base;
                     *w = sw;
                     *h = sh;
                     result = NO_ERROR;
