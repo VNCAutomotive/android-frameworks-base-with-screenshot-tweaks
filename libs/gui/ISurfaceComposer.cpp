@@ -105,7 +105,8 @@ public:
             sp<IMemoryHeap>* heap,
             uint32_t* width, uint32_t* height, PixelFormat* format,
             uint32_t reqWidth, uint32_t reqHeight,
-            uint32_t minLayerZ, uint32_t maxLayerZ)
+            uint32_t minLayerZ, uint32_t maxLayerZ,
+            uint32_t* seqNr)
     {
         Parcel data, reply;
         data.writeInterfaceToken(ISurfaceComposer::getInterfaceDescriptor());
@@ -114,6 +115,7 @@ public:
         data.writeInt32(reqHeight);
         data.writeInt32(minLayerZ);
         data.writeInt32(maxLayerZ);
+        data.writeInt32(*seqNr);
         if (*heap == NULL) {
             data.writeInt32(0);
         } else {
@@ -125,6 +127,7 @@ public:
         *width = reply.readInt32();
         *height = reply.readInt32();
         *format = reply.readInt32();
+        *seqNr = reply.readInt32();
         return reply.readInt32();
     }
 
@@ -180,6 +183,13 @@ public:
         }
         return result != 0;
     }
+
+    virtual void signal()
+    {
+        Parcel data, reply;
+        data.writeInterfaceToken(ISurfaceComposer::getInterfaceDescriptor());
+        remote()->transact(BnSurfaceComposer::SIGNAL, data, &reply);
+    }
 };
 
 IMPLEMENT_META_INTERFACE(SurfaceComposer, "android.ui.ISurfaceComposer");
@@ -230,6 +240,7 @@ status_t BnSurfaceComposer::onTransact(
             uint32_t reqHeight = data.readInt32();
             uint32_t minLayerZ = data.readInt32();
             uint32_t maxLayerZ = data.readInt32();
+            uint32_t seqNr = data.readInt32();
             uint32_t heapProvided = data.readInt32();
             sp<IMemoryHeap> heap;
             if (heapProvided) {
@@ -240,11 +251,12 @@ status_t BnSurfaceComposer::onTransact(
             uint32_t w, h;
             PixelFormat f;
             status_t res = captureScreen(dpy, &heap, &w, &h, &f,
-                    reqWidth, reqHeight, minLayerZ, maxLayerZ);
+                    reqWidth, reqHeight, minLayerZ, maxLayerZ, &seqNr);
             reply->writeStrongBinder(heap->asBinder());
             reply->writeInt32(w);
             reply->writeInt32(h);
             reply->writeInt32(f);
+            reply->writeInt32(seqNr);
             reply->writeInt32(res);
         } break;
         case TURN_ELECTRON_BEAM_OFF: {
@@ -265,6 +277,10 @@ status_t BnSurfaceComposer::onTransact(
                     interface_cast<ISurfaceTexture>(data.readStrongBinder());
             int32_t result = authenticateSurfaceTexture(surfaceTexture) ? 1 : 0;
             reply->writeInt32(result);
+        } break;
+        case SIGNAL: {
+            CHECK_INTERFACE(ISurfaceComposer, data, reply);
+            signal();
         } break;
         default:
             return BBinder::onTransact(code, data, reply, flags);

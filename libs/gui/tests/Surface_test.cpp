@@ -80,11 +80,11 @@ TEST_F(SurfaceTest, ScreenshotsOfProtectedBuffersSucceed) {
 
     // Verify the screenshot works with no protected buffers.
     sp<IMemoryHeap> heap;
-    uint32_t w=0, h=0;
+    uint32_t w=0, h=0, seqNr=0;
     PixelFormat fmt=0;
     sp<ISurfaceComposer> sf(ComposerService::getComposerService());
     ASSERT_EQ(NO_ERROR, sf->captureScreen(0, &heap, &w, &h, &fmt, 64, 64, 0,
-            0x7fffffff));
+            0x7fffffff, &seqNr));
     ASSERT_TRUE(heap != NULL);
 
     // Set the PROTECTED usage bit and verify that the screenshot fails.  Note
@@ -113,9 +113,9 @@ TEST_F(SurfaceTest, ScreenshotsOfProtectedBuffersSucceed) {
         ASSERT_EQ(NO_ERROR, anw->queueBuffer(anw.get(), buf));
     }
     heap = 0;
-    w = h = fmt = 0;
+    w = h = fmt = seqNr = 0;
     ASSERT_EQ(NO_ERROR, sf->captureScreen(0, &heap, &w, &h, &fmt,
-            64, 64, 0, 0x7fffffff));
+            64, 64, 0, 0x7fffffff, &seqNr));
     ASSERT_TRUE(heap != NULL);
 }
 

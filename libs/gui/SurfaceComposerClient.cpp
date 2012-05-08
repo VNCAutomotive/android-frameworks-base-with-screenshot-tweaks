@@ -540,32 +540,45 @@ status_t SurfaceComposerClient::unfreezeDisplay(DisplayID dpy, uint32_t flags)
 // ----------------------------------------------------------------------------
 
 ScreenshotClient::ScreenshotClient()
-    : mWidth(0), mHeight(0), mFormat(PIXEL_FORMAT_NONE), mHeap(0) {
+    : mWidth(0), mHeight(0), mFormat(PIXEL_FORMAT_NONE), mHeap(0), mSeqNr(0) {
 }
 
 status_t ScreenshotClient::update() {
-    sp<ISurfaceComposer> s(ComposerService::getComposerService());
-    if (s == NULL) return NO_INIT;
-    return s->captureScreen(0, &mHeap,
-            &mWidth, &mHeight, &mFormat, 0, 0,
-            0, -1UL);
+    return update(0,0);
 }
 
+
 status_t ScreenshotClient::update(uint32_t reqWidth, uint32_t reqHeight) {
-    sp<ISurfaceComposer> s(ComposerService::getComposerService());
-    if (s == NULL) return NO_INIT;
-    return s->captureScreen(0, &mHeap,
-            &mWidth, &mHeight, &mFormat, reqWidth, reqHeight,
-            0, -1UL);
+    return update(reqWidth, reqHeight, 0, -1UL);
 }
 
 status_t ScreenshotClient::update(uint32_t reqWidth, uint32_t reqHeight,
+        uint32_t minLayerZ, uint32_t maxLayerZ) {
+    mSeqNr = 0;
+    return wait_update(reqWidth, reqHeight, minLayerZ, maxLayerZ);
+}
+
+status_t ScreenshotClient::wait_update() {
+    return wait_update(0,0);
+}
+
+status_t ScreenshotClient::wait_update(uint32_t reqWidth, uint32_t reqHeight) {
+    return wait_update(reqWidth, reqHeight, 0, -1UL);
+}
+
+status_t ScreenshotClient::wait_update(uint32_t reqWidth, uint32_t reqHeight,
         uint32_t minLayerZ, uint32_t maxLayerZ) {
     sp<ISurfaceComposer> s(ComposerService::getComposerService());
     if (s == NULL) return NO_INIT;
     return s->captureScreen(0, &mHeap,
             &mWidth, &mHeight, &mFormat, reqWidth, reqHeight,
-            minLayerZ, maxLayerZ);
+            minLayerZ, maxLayerZ, &mSeqNr);
+}
+
+void ScreenshotClient::signal() {
+    sp<ISurfaceComposer> s(ComposerService::getComposerService());
+    if (s == NULL) return;
+    s->signal();
 }
 
 void ScreenshotClient::release() {

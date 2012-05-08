@@ -117,12 +117,14 @@ public:
 
     /* Capture the specified screen. requires READ_FRAME_BUFFER permission
      * This function will fail if there is a secure window on screen.
+     * If you provide seqNr, this function will block until a new frame
+     * is available.
      */
     virtual status_t captureScreen(DisplayID dpy,
             sp<IMemoryHeap>* heap,
             uint32_t* width, uint32_t* height, PixelFormat* format,
             uint32_t reqWidth, uint32_t reqHeight,
-            uint32_t minLayerZ, uint32_t maxLayerZ) = 0;
+            uint32_t minLayerZ, uint32_t maxLayerZ, uint32_t* seqNr) = 0;
 
     virtual status_t turnElectronBeamOff(int32_t mode) = 0;
     virtual status_t turnElectronBeamOn(int32_t mode) = 0;
@@ -131,6 +133,11 @@ public:
      */
     virtual bool authenticateSurfaceTexture(
             const sp<ISurfaceTexture>& surface) const = 0;
+
+    /* Prompt the surface flinger to process through its main loop.
+     * This will cause 'captureScreen' to return if it's waiting for
+     * a screen update. */
+    virtual void signal() = 0;
 };
 
 // ----------------------------------------------------------------------------
@@ -151,6 +158,7 @@ public:
         TURN_ELECTRON_BEAM_OFF,
         TURN_ELECTRON_BEAM_ON,
         AUTHENTICATE_SURFACE,
+        SIGNAL,
     };
 
     virtual status_t    onTransact( uint32_t code,

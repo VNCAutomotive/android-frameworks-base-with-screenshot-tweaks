@@ -84,6 +84,7 @@ SurfaceFlinger::SurfaceFlinger()
         mTransactionFlags(0),
         mTransationPending(false),
         mLayersRemoved(false),
+        mFrameSequenceNumber(1),
         mBootTime(systemTime()),
         mVisibleRegionsDirty(false),
         mHwWorkListDirty(false),
@@ -373,6 +374,10 @@ bool SurfaceFlinger::authenticateSurfaceTexture(
     return false;
 }
 
+void SurfaceFlinger::signal() {
+    signalEvent();
+}
+
 status_t SurfaceFlinger::postMessageAsync(const sp<MessageBase>& msg,
         nsecs_t reltime, uint32_t flags)
 {
@@ -410,6 +415,15 @@ bool SurfaceFlinger::threadLoop()
     if (UNLIKELY(transactionFlags)) {
         handleTransaction(transactionFlags);
     }
+
+    { // Increment the frame count and signal any waiting clients
+        Mutex::Autolock _l(mStateLock);
+        mFrameSequenceNumber++;
+        if(mFrameSequenceNumber == 0)
+            mFrameSequenceNumber = 1;
+    }
+    mFrameSequenceCV.broadcast();
+
 
     // post surfaces (if needed)
     handlePageFlip();
@@ -2392,7 +2406,7 @@ status_t SurfaceFlinger::captureScreen(DisplayID dpy,
         sp<IMemoryHeap>* heap,
         uint32_t* width, uint32_t* height, PixelFormat* format,
         uint32_t sw, uint32_t sh,
-        uint32_t minLayerZ, uint32_t maxLayerZ)
+        uint32_t minLayerZ, uint32_t maxLayerZ, uint32_t* seqNr)
 {
     // only one display supported for now
     if (UNLIKELY(uint32_t(dpy) >= DISPLAY_COUNT))
@@ -2400,6 +2414,17 @@ status_t SurfaceFlinger::captureScreen(DisplayID dpy,
 
     if (!GLExtensions::getInstance().haveFramebufferObject())
         return INVALID_OPERATION;
+
+    { // Wait until the frame sequence number differs from the
+      // caller-supplied sequence number
+        Mutex::Autolock _l(mStateLock);
+
+        while(mFrameSequenceNumber == *seqNr) {
+            mFrameSequenceCV.wait(mStateLock);
+        }
+
+        *seqNr = mFrameSequenceNumber;
+    }
 
     class MessageCaptureScreen : public MessageBase {
         SurfaceFlinger* flinger;

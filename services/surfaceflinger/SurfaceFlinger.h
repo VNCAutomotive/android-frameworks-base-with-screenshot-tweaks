@@ -176,10 +176,12 @@ public:
             sp<IMemoryHeap>* heap,
             uint32_t* width, uint32_t* height,
             PixelFormat* format, uint32_t reqWidth, uint32_t reqHeight,
-            uint32_t minLayerZ, uint32_t maxLayerZ);
+            uint32_t minLayerZ, uint32_t maxLayerZ,
+            uint32_t* seqNr);
 
     virtual status_t                    turnElectronBeamOff(int32_t mode);
     virtual status_t                    turnElectronBeamOn(int32_t mode);
+    virtual void                        signal();
 
             void                        screenReleased(DisplayID dpy);
             void                        screenAcquired(DisplayID dpy);
@@ -346,6 +348,8 @@ private:
                 SortedVector< sp<LayerBase> > mLayerPurgatory;
                 bool                    mTransationPending;
                 Vector< sp<LayerBase> > mLayersPendingRemoval;
+    volatile    int32_t                 mFrameSequenceNumber;
+                Condition               mFrameSequenceCV;
 
                 // protected by mStateLock (but we could use another lock)
                 GraphicPlane                mGraphicPlanes[1];

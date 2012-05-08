@@ -167,6 +167,7 @@ class ScreenshotClient
     uint32_t mWidth;
     uint32_t mHeight;
     PixelFormat mFormat;
+    uint32_t mSeqNr;
 public:
     ScreenshotClient();
 
@@ -175,6 +176,13 @@ public:
     status_t update(uint32_t reqWidth, uint32_t reqHeight);
     status_t update(uint32_t reqWidth, uint32_t reqHeight,
             uint32_t minLayerZ, uint32_t maxLayerZ);
+    status_t wait_update();
+    status_t wait_update(uint32_t reqWidth, uint32_t reqHeight);
+    status_t wait_update(uint32_t reqWidth, uint32_t reqHeight,
+            uint32_t minLayerZ, uint32_t maxLayerZ);
+
+    // cause wait_update() to complete immediately
+    void signal();
 
     sp<IMemoryHeap> getHeap();
 
