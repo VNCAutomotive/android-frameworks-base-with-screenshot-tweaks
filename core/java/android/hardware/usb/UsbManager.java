@@ -186,6 +186,14 @@ public class UsbManager {
     public static final String USB_FUNCTION_ACCESSORY = "accessory";
 
     /**
+     * Name of the NCM USB function.
+     * Used in extras for the {@link #ACTION_USB_STATE} broadcast
+     *
+     * {@hide}
+     */
+    public static final String USB_FUNCTION_NCM = "ncm";
+
+    /**
      * Name of extra for {@link #ACTION_USB_DEVICE_ATTACHED} and
      * {@link #ACTION_USB_DEVICE_DETACHED} broadcasts
      * containing the UsbDevice object for the device.

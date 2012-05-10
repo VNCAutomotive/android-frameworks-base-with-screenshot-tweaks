@@ -128,11 +128,15 @@ public class UsbDeviceManager {
 
             String state = event.get("USB_STATE");
             String accessory = event.get("ACCESSORY");
+            String ncm = event.get("NCM");
             if (state != null) {
                 mHandler.updateState(state);
             } else if ("START".equals(accessory)) {
                 if (DEBUG) Slog.d(TAG, "got accessory start");
                 setCurrentFunction(UsbManager.USB_FUNCTION_ACCESSORY, false);
+            } else if ("START".equals(ncm)) {
+                if (DEBUG) Slog.d(TAG, "got NCM start");
+                setCurrentFunction(UsbManager.USB_FUNCTION_NCM, false);
             }
         }
     };
