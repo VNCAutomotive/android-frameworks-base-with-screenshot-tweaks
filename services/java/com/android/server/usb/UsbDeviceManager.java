@@ -287,6 +287,7 @@ public class UsbDeviceManager {
         // current USB state
         private boolean mConnected;
         private boolean mConfigured;
+        private boolean mNcmRequired;
         private String mCurrentFunctions;
         private String mDefaultFunctions;
         private UsbAccessory mCurrentAccessory;
@@ -385,6 +386,9 @@ public class UsbDeviceManager {
             } else if ("CONFIGURED".equals(state)) {
                 connected = 1;
                 configured = 1;
+            } else if ("NCM".equals(state)) {
+                connected = 1;
+                configured = 2;
             } else {
                 Slog.e(TAG, "unknown state " + state);
                 return;
@@ -565,12 +569,20 @@ public class UsbDeviceManager {
             switch (msg.what) {
                 case MSG_UPDATE_STATE:
                     mConnected = (msg.arg1 == 1);
-                    mConfigured = (msg.arg2 == 1);
+                    mConfigured = (msg.arg2 >= 1);
+                    mNcmRequired = (msg.arg2 == 2);
                     updateUsbNotification();
                     updateAdbNotification();
                     if (containsFunction(mCurrentFunctions,
                             UsbManager.USB_FUNCTION_ACCESSORY)) {
                         updateCurrentAccessory();
+                    }
+                    if (mNcmRequired && !containsFunction(mCurrentFunctions,
+                            UsbManager.USB_FUNCTION_NCM)) {
+                        String functions = UsbManager.USB_FUNCTION_NCM;
+                        if (containsFunction(mCurrentFunctions, UsbManager.USB_FUNCTION_ADB))
+                            functions = addFunction(functions, UsbManager.USB_FUNCTION_ADB);
+                        setEnabledFunctions(functions, false);
                     }
 
                     if (!mConnected) {
