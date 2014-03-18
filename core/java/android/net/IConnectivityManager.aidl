@@ -101,7 +101,7 @@ interface IConnectivityManager
 
     String[] getTetherableBluetoothRegexs();
 
-    int setUsbTethering(boolean enable);
+    int setUsbTethering(boolean enable, boolean useNcm);
 
     void requestNetworkTransitionWakelock(in String forWhom);
 

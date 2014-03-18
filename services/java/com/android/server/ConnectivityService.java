@@ -3204,13 +3204,18 @@ public class ConnectivityService extends IConnectivityManager.Stub {
         }
     }
 
-    public int setUsbTethering(boolean enable) {
+    public int setUsbTethering(boolean enable, boolean useNcm) {
+	  try {
         enforceTetherChangePermission();
         if (isTetheringSupported()) {
-            return mTethering.setUsbTethering(enable);
+            return mTethering.setUsbTethering(enable, useNcm);
         } else {
             return ConnectivityManager.TETHER_ERROR_UNSUPPORTED;
         }
+	  } catch(Exception e) {
+	    e.printStackTrace();
+	  }
+	  return ConnectivityManager.TETHER_ERROR_UNSUPPORTED;
     }
 
     // TODO - move iface listing, queries, etc to new module

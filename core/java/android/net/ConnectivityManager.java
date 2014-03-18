@@ -1102,7 +1102,18 @@ public class ConnectivityManager {
      */
     public int setUsbTethering(boolean enable) {
         try {
-            return mService.setUsbTethering(enable);
+            return mService.setUsbTethering(enable, false);
+        } catch (RemoteException e) {
+            return TETHER_ERROR_SERVICE_UNAVAIL;
+        }
+    }
+
+    /**
+     * {@hide}
+     */
+    public int setUsbNCMTethering(boolean enable) {
+        try {
+            return mService.setUsbTethering(enable, true);
         } catch (RemoteException e) {
             return TETHER_ERROR_SERVICE_UNAVAIL;
         }

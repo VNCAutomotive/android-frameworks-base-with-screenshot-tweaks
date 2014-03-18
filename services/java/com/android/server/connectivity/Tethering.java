@@ -75,7 +75,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
     private Context mContext;
     private final static String TAG = "Tethering";
     private final static boolean DBG = true;
-    private final static boolean VDBG = false;
+    private final static boolean VDBG = true;
 
     // TODO - remove both of these - should be part of interface inspection/selection stuff
     private String[] mTetherableUsbRegexs;
@@ -127,7 +127,9 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
 
     private Notification mTetheredNotification;
 
+    private boolean mAdbEnabled;         // used to preserve adb when starting NCM
     private boolean mRndisEnabled;       // track the RNDIS function enabled state
+    private boolean mNcmEnabled;         // track the NCM function enabled state
     private boolean mUsbTetherRequested; // true if USB tethering should be started
                                          // when RNDIS is enabled
 
@@ -501,12 +503,27 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
             if (action.equals(UsbManager.ACTION_USB_STATE)) {
                 synchronized (Tethering.this.mPublicSync) {
                     boolean usbConnected = intent.getBooleanExtra(UsbManager.USB_CONNECTED, false);
+                    boolean ncmRequested = intent.getBooleanExtra(UsbManager.NCM_REQUESTED, false);
                     mRndisEnabled = intent.getBooleanExtra(UsbManager.USB_FUNCTION_RNDIS, false);
+                    mNcmEnabled = intent.getBooleanExtra(UsbManager.USB_FUNCTION_NCM, false);
+                    mAdbEnabled = intent.getBooleanExtra(UsbManager.USB_FUNCTION_ADB,false);
                     // start tethering if we have a request pending
-                    if (usbConnected && mRndisEnabled && mUsbTetherRequested) {
+                    if (usbConnected && ((mRndisEnabled || mNcmEnabled) && mUsbTetherRequested)) {
                         tetherUsb(true);
+                        mUsbTetherRequested = false;
+                    }  else if(usbConnected && (!mNcmEnabled && ncmRequested)) {
+                        if (VDBG) Log.d(TAG, "Bringing up USB_FUNCTION_NCM");
+                        UsbManager usbManager = (UsbManager)mContext.getSystemService(Context.USB_SERVICE);
+                        if(mAdbEnabled)
+                            usbManager.setCurrentFunction(UsbManager.USB_FUNCTION_NCM + "," + UsbManager.USB_FUNCTION_ADB, false);
+                        else
+                            usbManager.setCurrentFunction(UsbManager.USB_FUNCTION_NCM, false);
+                        // replace by setUsbTethering(true,true) if you want NCM tethering
+                        // to be activated once an ML command is received, without any app
+                        // having to issue a tethering request
+                    } else {
+                        mUsbTetherRequested = false;
                     }
-                    mUsbTetherRequested = false;
                 }
             } else if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
                 NetworkInfo networkInfo = (NetworkInfo)intent.getParcelableExtra(
@@ -594,21 +611,35 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         return mTetherableBluetoothRegexs;
     }
 
-    public int setUsbTethering(boolean enable) {
-        if (VDBG) Log.d(TAG, "setUsbTethering(" + enable + ")");
+    public int setUsbNCMTethering(boolean enable) {
+        return setUsbTethering(enable, true);
+    }
+
+    public int setUsbTethering(boolean enable, boolean useNcm) {
+        if (VDBG) Log.d(TAG, "setUsbTethering(" + enable + "," + useNcm + ")");
         UsbManager usbManager = (UsbManager)mContext.getSystemService(Context.USB_SERVICE);
 
         synchronized (mPublicSync) {
             if (enable) {
-                if (mRndisEnabled) {
+                if ( (mRndisEnabled && !useNcm) || (mNcmEnabled && useNcm) ) {
                     tetherUsb(true);
                 } else {
                     mUsbTetherRequested = true;
-                    usbManager.setCurrentFunction(UsbManager.USB_FUNCTION_RNDIS, false);
+                    if(useNcm) {
+                        if (VDBG) Log.d(TAG, "Bringing up USB_FUNCTION_NCM");
+                        if(mRndisEnabled)
+                            usbManager.setCurrentFunction(null, false);
+                        usbManager.setCurrentFunction(UsbManager.USB_FUNCTION_NCM, false);
+                    } else {
+                        if (VDBG) Log.d(TAG, "Bringing up USB_FUNCTION_RNDIS");
+                        if(mNcmEnabled)
+                            usbManager.setCurrentFunction(null, false);
+                        usbManager.setCurrentFunction(UsbManager.USB_FUNCTION_RNDIS, false);
+                    }
                 }
             } else {
                 tetherUsb(false);
-                if (mRndisEnabled) {
+                if (mRndisEnabled || mNcmEnabled) {
                     usbManager.setCurrentFunction(null, false);
                 }
                 mUsbTetherRequested = false;
